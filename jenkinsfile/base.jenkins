@@ -45,11 +45,26 @@ pipeline {
               usernameVariable: 'SSH_USER'
           )]) {
               sh '''
-                  scp -i $SSH_KEY -o StrictHostKeyChecking=no build.tar.gz ${SSH_USER}@147.45.184.71:/var/www/html
-                  ssh -i $SSH_KEY -o StrictHostKeyChecking=no ${SSH_USER}@147.45.184.71"
-                      tar -xzf /var/www/html/build.tar.gz -C /var/www/html/
-                      rm /var/www/html/build.tar.gz
-                  "
+                  echo "--- DEBUG INFO ---"
+                    echo "Key path: \$SSH_KEY"
+                    echo "User: \$SSH_USER"
+                    ls -la \$SSH_KEY
+                    
+                    echo "--- Testing connection ---"
+                    ssh -vvv -i \$SSH_KEY -o StrictHostKeyChecking=no \$SSH_USER@147.45.184.71 "whoami" || true
+                    
+                    echo "--- Copying files ---"
+                    scp -v -i \$SSH_KEY -o StrictHostKeyChecking=no build.tar.gz \$SSH_USER@147.45.184.71:/tmp/
+                """
+                
+                // Основные команды (после успешного теста)
+                sh """
+                    ssh -i \$SSH_KEY \$SSH_USER@147.45.184.71 "
+                        sudo mkdir -p /var/www/html
+                        sudo mv /tmp/build.tar.gz /var/www/html/
+                        cd /var/www/html && sudo tar -xzf build.tar.gz
+                        sudo chown -R www-data:www-data /var/www/html
+                    "
               '''
             }
         }  
