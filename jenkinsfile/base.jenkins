@@ -1,0 +1,59 @@
+#!groovy
+pipeline {
+    agent any
+    triggers {
+        pollSCM('H/5 * * * *')
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+        stage('Run Tests') {
+            steps {
+                sh 'npm test'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'npm run build'
+            }
+        }
+        stage('Archive Artifacts') {
+            steps {
+                sh 'tar -czf build.tar.gz ./dist'
+                archiveArtifacts artifacts: 'build.tar.gz', onlyIfSuccessful: true
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sshPublisher(
+                    publishers: [
+                        sshPublisherDesc(
+                            configName: 'deployment-server',
+                            transfers: [
+                                sshTransfer(
+                                    sourceFiles: 'build.tar.gz',
+                                    removePrefix: '',
+                                    remoteDirectory: '/path/to/deploy',
+                                    execCommand: 'tar -xzf /path/to/deploy/build.tar.gz -C /path/to/deploy && rm /path/to/deploy/build.tar.gz'
+                                )
+                            ]
+                        )
+                    ]
+                )
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
