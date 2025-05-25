@@ -45,8 +45,8 @@ pipeline {
               usernameVariable: 'SSH_USER'
           )]) {
               sh '''
-                  scp -i $SSH_KEY -o StrictHostKeyChecking=no build.tar.gz ${SSH_USER}@server:/var/www/html
-                  ssh -i $SSH_KEY -o StrictHostKeyChecking=no ${SSH_USER}@server "
+                  scp -i $SSH_KEY -o StrictHostKeyChecking=no build.tar.gz ${SSH_USER}@147.45.184.71:/var/www/html
+                  ssh -i $SSH_KEY -o StrictHostKeyChecking=no ${SSH_USER}@147.45.184.71"
                       tar -xzf /var/www/html/build.tar.gz -C /var/www/html/
                       rm /var/www/html/build.tar.gz
                   "
