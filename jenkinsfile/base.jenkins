@@ -37,30 +37,22 @@ pipeline {
                 archiveArtifacts artifacts: 'build.tar.gz', onlyIfSuccessful: true
             }
         }
-        stage('Deploy') {
-          steps {
-              sshPublisher(
-                  publishers: [
-                      sshPublisherDesc(
-                          configName: '843693ae-3b86-4fd0-9eb9-b375ff07989a', 
-                          transfers: [
-                              sshTransfer(
-                                  sourceFiles: 'build.tar.gz', 
-                                  removePrefix: '', 
-                                  remoteDirectory: '/var/www/my-app', 
-                                  execCommand: '''
-                                      # Распаковываем архив и удаляем его
-                                      tar -xzf /var/www/my-app/build.tar.gz -C /var/www/my-app/
-                                      rm /var/www/my-app/build.tar.gz
-                                      
-                                      sudo systemctl restart nginx || true
-                                  '''
-                              )
-                          ]
-                      )
-                  ]
-              )
-          }
+    stage('Deploy') {
+      steps {
+          withCredentials([sshUserPrivateKey(
+              credentialsId: 'deployment-server-ssh',
+              keyFileVariable: 'SSH_KEY',
+              usernameVariable: 'SSH_USER'
+          )]) {
+              sh '''
+                  scp -i $SSH_KEY -o StrictHostKeyChecking=no build.tar.gz ${SSH_USER}@server:/var/www/html
+                  ssh -i $SSH_KEY -o StrictHostKeyChecking=no ${SSH_USER}@server "
+                      tar -xzf /var/www/html/build.tar.gz -C /var/www/html/
+                      rm /var/www/html/build.tar.gz
+                  "
+              '''
+            }
+        }  
       }
     }
     post {
