@@ -40,7 +40,7 @@ pipeline {
     stage('Deploy') {
       steps {
           withCredentials([sshUserPrivateKey(
-              credentialsId: 'deployment-server-ssh',
+              credentialsId: '843693ae-3b86-4fd0-9eb9-b375ff07989a',
               keyFileVariable: 'SSH_KEY',
               usernameVariable: 'SSH_USER'
           )]) {
