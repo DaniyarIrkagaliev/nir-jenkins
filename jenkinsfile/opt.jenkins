@@ -14,6 +14,7 @@ pipeline {
         DOCKER_HUB_REPO = 'daniyarirkagaliev' 
         DOCKER_IMAGE = 'my-app'
         DOCKER_CREDS = credentials('docker-hub-cred')
+        DOCKERFILE_PATH = '/docker/Dockerfile'
     }
     stages {
         stage('Checkout') {
@@ -47,28 +48,22 @@ pipeline {
         stage('Build') {
             steps {
                 sh 'npm run build'
-            script {
-                // Создаем Dockerfile если его нет (опционально)
-                if (!fileExists('Dockerfile')) {
-                    writeFile file: 'Dockerfile', text: '''
-                    FROM node:alpine
-                    WORKDIR /app
-                    COPY dist/ ./dist/
-                    EXPOSE 3000
-                    CMD ["node", "dist/server.js"]
-                    '''
-                }
             }
         }
         stage('Build and Push Docker Image') {
             steps {
                 script {
+                    // Проверяем существование Dockerfile
+                    if (!fileExists(env.DOCKERFILE_PATH)) {
+                        error("Dockerfile not found at path: ${env.DOCKERFILE_PATH}")
+                    }
+                    
                     // Авторизация в Docker Hub
                     docker.withRegistry("https://${DOCKER_REGISTRY}", "${DOCKER_CREDS}") {
-                        // Сборка и тегирование
+                        // Сборка с указанием пути к Dockerfile
                         def customImage = docker.build(
                             "${DOCKER_HUB_REPO}/${DOCKER_IMAGE}:${env.BUILD_NUMBER}",
-                            "--pull --no-cache ."
+                            "-f ${env.DOCKERFILE_PATH} --pull --no-cache ."
                         )
                         
                         // Push с двумя тегами
@@ -81,7 +76,6 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Альтернативный вариант деплоя через SSH (если нужно)
                     sshPublisher(
                         publishers: [
                             sshPublisherDesc(
