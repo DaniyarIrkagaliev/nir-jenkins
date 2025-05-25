@@ -56,8 +56,7 @@ pipeline {
                                       sudo systemctl restart nginx || true
                                   '''
                               )
-                          ],
-                          usePty: true // Для sudo-команд
+                          ]
                       )
                   ]
               )
