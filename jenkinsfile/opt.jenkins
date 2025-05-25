@@ -1,28 +1,114 @@
+pipeline {
+    agent any
+    triggers {
+        pollSCM('H/5 * * * *')
+    }
+    options {
+        skipStagesAfterUnstable()
+    }
+    environment {
+        DOCKER_REGISTRY = 'docker.io'
+        DOCKER_HUB_REPO = 'daniyarirkagaliev' 
+        DOCKER_IMAGE = 'my-app'
+        DOCKER_CREDS = credentials('docker-hub-cred')
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Cache Dependencies') {
+            steps {
+                script {
+                    def cacheKey = "node-modules-${env.NODE_VERSION}-${sh(script: 'sha1sum package-lock.json | cut -d " " -f1', returnStdout: true).trim()}"
 
-environment {
-    DOCKER_REGISTRY = 'docker.io'
-    DOCKER_HUB_REPO = 'daniyarirkagaliev' 
-    DOCKER_IMAGE = 'my-app'
-    DOCKER_CREDS = credentials('docker-hub-cred') 
-}
-
-
-
-        stage('Build and Push') {
-        steps {
+                    if (fileExists('node_modules')) {
+                        echo 'Using cached node_modules'
+                    } else {
+                        sh 'npm install'
+                    }
+                }
+            }
+        }
+        stage('Linting') {
+            steps {
+                sh 'npm run lint'
+            }
+        }
+        stage('Tests') {
+            steps {
+                sh 'npm test'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'npm run build'
             script {
-                // Авторизация в Docker Hub
-                docker.withRegistry("https://${DOCKER_REGISTRY}", "${DOCKER_CREDS}") {
-                    // Сборка и тегирование
-                    def customImage = docker.build(
-                        "${DOCKER_HUB_REPO}/${DOCKER_IMAGE}:${env.BUILD_NUMBER}",
-                        "--pull --no-cache ."
+                // Создаем Dockerfile если его нет (опционально)
+                if (!fileExists('Dockerfile')) {
+                    writeFile file: 'Dockerfile', text: '''
+                    FROM node:alpine
+                    WORKDIR /app
+                    COPY dist/ ./dist/
+                    EXPOSE 3000
+                    CMD ["node", "dist/server.js"]
+                    '''
+                }
+            }
+        }
+        stage('Build and Push Docker Image') {
+            steps {
+                script {
+                    // Авторизация в Docker Hub
+                    docker.withRegistry("https://${DOCKER_REGISTRY}", "${DOCKER_CREDS}") {
+                        // Сборка и тегирование
+                        def customImage = docker.build(
+                            "${DOCKER_HUB_REPO}/${DOCKER_IMAGE}:${env.BUILD_NUMBER}",
+                            "--pull --no-cache ."
+                        )
+                        
+                        // Push с двумя тегами
+                        customImage.push()
+                        customImage.push('latest')
+                    }
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                script {
+                    // Альтернативный вариант деплоя через SSH (если нужно)
+                    sshPublisher(
+                        publishers: [
+                            sshPublisherDesc(
+                                configName: '843693ae-3b86-4fd0-9eb9-b375ff07989a',
+                                transfers: [
+                                    sshTransfer(
+                                        execCommand: """
+                                        docker pull ${DOCKER_HUB_REPO}/${DOCKER_IMAGE}:latest
+                                        docker stop ${DOCKER_IMAGE} || true
+                                        docker rm ${DOCKER_IMAGE} || true
+                                        docker run -d --name ${DOCKER_IMAGE} -p 3000:3000 ${DOCKER_HUB_REPO}/${DOCKER_IMAGE}:latest
+                                        """
+                                    )
+                                ]
+                            )
+                        ]
                     )
-                    
-                    // Push с двумя тегами
-                    customImage.push()
-                    customImage.push('latest')
                 }
             }
         }
     }
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}
