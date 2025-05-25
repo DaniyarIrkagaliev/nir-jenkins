@@ -38,24 +38,31 @@ pipeline {
             }
         }
         stage('Deploy') {
-            steps {
-                sshPublisher(
-                    publishers: [
-                        sshPublisherDesc(
-                            configName: 'deployment-server',
-                            transfers: [
-                                sshTransfer(
-                                    sourceFiles: 'build.tar.gz',
-                                    removePrefix: '',
-                                    remoteDirectory: '/path/to/deploy',
-                                    execCommand: 'tar -xzf /path/to/deploy/build.tar.gz -C /path/to/deploy && rm /path/to/deploy/build.tar.gz'
-                                )
-                            ]
-                        )
-                    ]
-                )
-            }
-        }
+          steps {
+              sshPublisher(
+                  publishers: [
+                      sshPublisherDesc(
+                          configName: '843693ae-3b86-4fd0-9eb9-b375ff07989a', 
+                          transfers: [
+                              sshTransfer(
+                                  sourceFiles: 'build.tar.gz', 
+                                  removePrefix: '', 
+                                  remoteDirectory: '/var/www/my-app', 
+                                  execCommand: '''
+                                      # Распаковываем архив и удаляем его
+                                      tar -xzf /var/www/my-app/build.tar.gz -C /var/www/my-app/
+                                      rm /var/www/my-app/build.tar.gz
+                                      
+                                      sudo systemctl restart nginx || true
+                                  '''
+                              )
+                          ],
+                          usePty: true // Для sudo-команд
+                      )
+                  ]
+              )
+          }
+      }
     }
     post {
         always {
