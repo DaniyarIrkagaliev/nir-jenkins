@@ -17,7 +17,6 @@ pipeline {
     }
 
     environment {
-        SNYK_TOKEN = credentials('snyk-auth-token')
         DOCKER_REGISTRY = 'docker.io'
         DOCKER_HUB_REPO = 'daniyarirkagaliev'
         DOCKER_IMAGE = 'my-app'
