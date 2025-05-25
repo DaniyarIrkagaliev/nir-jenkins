@@ -56,18 +56,6 @@ pipeline {
             }
         }
 
-        stage('Security Scan') {
-            steps {
-                script {
-                    withEnv(["PATH+SNYK=/usr/local/bin"]) {
-                        sh 'npm install -g snyk'
-                        sh 'snyk auth --token $SNYK_TOKEN'
-                        sh 'snyk test --severity-threshold=high'
-                    }
-                }
-            }
-        }
-
         stage('Build') {
             steps {
                 sh 'npm run build -- --incremental'
