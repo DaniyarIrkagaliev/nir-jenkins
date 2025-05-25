@@ -58,14 +58,11 @@ pipeline {
                         error("Dockerfile not found at path: ${env.DOCKERFILE_PATH}")
                     }
                     
-                    docker.withRegistry("https://${DOCKER_REGISTRY}", "${DOCKER_CREDS}") {
-                        def customImage = docker.build(
-                            "${DOCKER_HUB_REPO}/${DOCKER_IMAGE}:${env.BUILD_NUMBER}",
-                            "-f ${env.DOCKERFILE_PATH} --pull --no-cache ."
-                        )
-                        customImage.push()
-                        customImage.push('latest')
-                    }
+                    sh """
+                        docker login -u $DOCKER_HUB_USER -p $DOCKER_HUB_TOKEN docker.io
+                        docker build -t ${DOCKER_HUB_REPO}/${DOCKER_IMAGE}:${env.BUILD_NUMBER} -f ${DOCKERFILE_PATH} .
+                        docker push ${DOCKER_HUB_REPO}/${DOCKER_IMAGE}:${env.BUILD_NUMBER}
+                      """
                 }
             }
         }
