@@ -14,7 +14,7 @@ pipeline {
         DOCKER_REGISTRY = 'docker.io'
         DOCKER_HUB_REPO = 'daniyarirkagaliev' 
         DOCKER_IMAGE = 'my-app'
-        DOCKER_CREDS = credentials('docker-hub-cred')
+        DOCKER_CREDS = credentials('docker-hub-creds')
         DOCKERFILE_PATH = 'docker/Dockerfile'
     }
     stages {
@@ -54,20 +54,15 @@ pipeline {
         stage('Build and Push Docker Image') {
             steps {
                 script {
-                    // Проверяем существование Dockerfile
                     if (!fileExists(env.DOCKERFILE_PATH)) {
                         error("Dockerfile not found at path: ${env.DOCKERFILE_PATH}")
                     }
                     
-                    // Авторизация в Docker Hub
                     docker.withRegistry("https://${DOCKER_REGISTRY}", "${DOCKER_CREDS}") {
-                        // Сборка с указанием пути к Dockerfile
                         def customImage = docker.build(
                             "${DOCKER_HUB_REPO}/${DOCKER_IMAGE}:${env.BUILD_NUMBER}",
                             "-f ${env.DOCKERFILE_PATH} --pull --no-cache ."
                         )
-                        
-                        // Push с двумя тегами
                         customImage.push()
                         customImage.push('latest')
                     }
