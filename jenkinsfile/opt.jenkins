@@ -8,13 +8,14 @@ pipeline {
     }
     options {
         skipStagesAfterUnstable()
+        timestamps()
     }
     environment {
         DOCKER_REGISTRY = 'docker.io'
         DOCKER_HUB_REPO = 'daniyarirkagaliev' 
         DOCKER_IMAGE = 'my-app'
         DOCKER_CREDS = credentials('docker-hub-cred')
-        DOCKERFILE_PATH = '/docker/Dockerfile'
+        DOCKERFILE_PATH = 'docker/Dockerfile'
     }
     stages {
         stage('Checkout') {
