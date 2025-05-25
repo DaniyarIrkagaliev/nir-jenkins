@@ -1,0 +1,28 @@
+
+environment {
+    DOCKER_REGISTRY = 'docker.io'
+    DOCKER_HUB_REPO = 'daniyarirkagaliev' 
+    DOCKER_IMAGE = 'my-app'
+    DOCKER_CREDS = credentials('docker-hub-cred') 
+}
+
+
+
+        stage('Build and Push') {
+        steps {
+            script {
+                // Авторизация в Docker Hub
+                docker.withRegistry("https://${DOCKER_REGISTRY}", "${DOCKER_CREDS}") {
+                    // Сборка и тегирование
+                    def customImage = docker.build(
+                        "${DOCKER_HUB_REPO}/${DOCKER_IMAGE}:${env.BUILD_NUMBER}",
+                        "--pull --no-cache ."
+                    )
+                    
+                    // Push с двумя тегами
+                    customImage.push()
+                    customImage.push('latest')
+                }
+            }
+        }
+    }
